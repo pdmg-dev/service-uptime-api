@@ -5,7 +5,6 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy.orm import Session
 
 from ..database import SessionLocal
 from ..models import Service, ServiceStatus

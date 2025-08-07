@@ -1,7 +1,8 @@
 # app/utils/healthcheck.py
 
-import time
 import asyncio
+import time
+
 import httpx
 
 
