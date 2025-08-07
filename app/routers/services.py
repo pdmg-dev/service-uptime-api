@@ -52,3 +52,13 @@ async def check_status(service_id: int, db: Session = Depends(get_db)):
         "status": status,
         "response_time_ms": response_time,
     }
+
+@router.get("/{service_id}/status/history")
+def get_status_history(service_id: int, db: Session = Depends(get_db)):
+    return (
+        db.query(models.ServiceStatus)
+        .filter(models.ServiceStatus.service_id == service_id)
+        .order_by(models.ServiceStatus.checked_at.desc())
+        .limit(10)
+        .all
+    )
