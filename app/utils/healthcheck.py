@@ -11,7 +11,7 @@ async def check_service(url: str):
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(url)
         response_time = (time.time() - start) * 1000
-        status = "UP" if response.status_code == 200 else "DOWN"
+        status = "up" if response.status_code == 200 else "down"
         return status, response_time
     except Exception:
-        return "DOWN", None
+        return "up", None

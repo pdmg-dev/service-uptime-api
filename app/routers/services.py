@@ -38,20 +38,29 @@ async def check_status(service_id: int, db: Session = Depends(get_db)):
 
     from ..utils.healthcheck import check_service
 
-    status, response_time = await check_service(service.url)
+    status_str, response_time = await check_service(service.url)
+
+    # Convert string to enum
+    try:
+        status_enum = models.ServiceState(status_str)
+    except ValueError:
+        raise HTTPException(status_code=500, detail=f"Invalid status: {status_str}")
 
     # Store in DB
     new_status = models.ServiceStatus(
-        service_id=service.id, status=status, response_time=response_time
+        service_id=service.id,
+        status=status_enum,
+        response_time=response_time,
     )
     db.add(new_status)
     db.commit()
 
     return {
         "service": service.name,
-        "status": status,
+        "status": status_enum.value,
         "response_time_ms": response_time,
     }
+
 
 @router.get("/{service_id}/status/history")
 def get_status_history(service_id: int, db: Session = Depends(get_db)):
@@ -60,5 +69,5 @@ def get_status_history(service_id: int, db: Session = Depends(get_db)):
         .filter(models.ServiceStatus.service_id == service_id)
         .order_by(models.ServiceStatus.checked_at.desc())
         .limit(10)
-        .all
+        .all()
     )
