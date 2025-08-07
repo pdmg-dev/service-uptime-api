@@ -1,10 +1,12 @@
 # app/models.py
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Enum
+import enum
+
+from sqlalchemy import (Column, DateTime, Enum, Float, ForeignKey, Integer,
+                        String)
 from sqlalchemy.sql import func
 
 from .database import Base
-import enum
 
 
 class ServiceState(str, enum.Enum):
