@@ -20,24 +20,31 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def check_and_store(service: Service):
+    try:
+        status, response_time = await check_service(service.url)
+        with SessionLocal() as db:
+            new_status = ServiceStatus(
+                service_id=service.id,
+                status=status,
+                response_time=response_time,
+            )
+            db.add(new_status)
+            db.commit()
+        logger.info(f"Checked {service.name} → {status} ({response_time} ms)")
+    except Exception as e:
+        logger.error(f"[Check Error] {service.name}: {e}")
+
+
 async def poll_services():
     while True:
+        services = []
         logger.info("[Scheduler] Checking services...")
         try:
-            db: Session = SessionLocal()
-            services = db.query(Service).all()
-            for service in services:
-                status, response_time = await check_service(service.url)
-                new_status = ServiceStatus(
-                    service_id=service.id,
-                    status=status,
-                    response_time=response_time,
-                )
-                db.add(new_status)
-                db.commit()
-                logger.info(f"Checked {service.name} → {status} ({response_time} ms)")
+            with SessionLocal() as db:
+                services = db.query(Service).filter(Service.is_active == 1).all()
         except Exception as e:
             logger.error(f"[Scheduler Error] {e}")
-        finally:
-            db.close()
+
+        await asyncio.gather(*(check_and_store(s) for s in services))
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
