@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import database, models, schemas
+from ..utils.aggregator import get_service_dashboard
 
 router = APIRouter(prefix="/services", tags=["services"])
 
@@ -71,3 +72,8 @@ def get_status_history(service_id: int, db: Session = Depends(get_db)):
         .limit(10)
         .all()
     )
+
+
+@router.get("/dashboard", response_model=list[schemas.ServiceDashboardOut])
+def dashboard(db: Session = Depends(get_db)):
+    return get_service_dashboard(db, hours=24)

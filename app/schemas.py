@@ -1,5 +1,7 @@
 # app/schemas.py
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -12,5 +14,16 @@ class ServiceOut(BaseModel):
     id: int
     name: str
     url: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ServiceDashboardOut(BaseModel):
+    id: int
+    name: str
+    url: str
+    last_checked_at: datetime | None
+    last_status: str | None
+    uptime_percent: float
+    average_response_time_ms: float | None
 
     model_config = ConfigDict(from_attributes=True)
