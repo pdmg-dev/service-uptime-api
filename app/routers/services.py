@@ -1,6 +1,6 @@
 # app/routers/services.py
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import database, models, schemas
@@ -34,7 +34,7 @@ def list_services(db: Session = Depends(get_db)):
 async def check_status(service_id: int, db: Session = Depends(get_db)):
     service = db.query(models.Service).filter(models.Service.id == service_id).first()
     if not service:
-        return {"error": "Service not found"}
+        raise HTTPException(status_code=404, detail="Service not found")
 
     from ..utils.healthcheck import check_service
 
