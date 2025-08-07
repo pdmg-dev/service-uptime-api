@@ -39,9 +39,6 @@ app/
     └── healthcheck.py  # Async service status checker
 ```
 
-
----
-
 ## 🧪 API Endpoints
 
 ### ➕ Create a Service
