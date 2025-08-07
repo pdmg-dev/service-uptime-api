@@ -1,5 +1,9 @@
-import httpx
+# app/utils/healthcheck.py
+
 import time
+
+import httpx
+
 
 async def check_service(url: str):
     try:
