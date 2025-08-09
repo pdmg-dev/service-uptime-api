@@ -3,21 +3,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from .. import database, models, schemas
+from .. import models, schemas
+from ..database import get_db
 from ..utils.aggregator import get_service_dashboard
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/services", tags=["services"])
-
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 
 @router.post("/", response_model=schemas.ServiceOut)
 def create_service(service: schemas.ServiceCreate, db: Session = Depends(get_db)):
