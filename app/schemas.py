@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, HttpUrl
+from pydantic import BaseModel, ConfigDict, HttpUrl, EmailStr
 
 
 class ServiceCreate(BaseModel):
@@ -17,6 +17,7 @@ class ServiceOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class ServiceDashboardOut(BaseModel):
     id: int
     name: str
@@ -27,3 +28,24 @@ class ServiceDashboardOut(BaseModel):
     average_response_time_ms: float | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RegisterIn(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+
+class LoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class TokenData(BaseModel):
+    username: str
+    email: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer" 
