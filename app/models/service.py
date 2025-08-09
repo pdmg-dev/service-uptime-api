@@ -2,16 +2,8 @@
 
 import enum
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    Enum,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-)
+from sqlalchemy import (Boolean, Column, DateTime, Enum, Float, ForeignKey,
+                        Integer, String)
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -20,6 +12,12 @@ from app.core.database import Base
 class ServiceState(str, enum.Enum):
     up = "UP"
     down = "DOWN"
+    slow = "SLOW"
+    limited = "LIMITED"
+    forbidden = "FORBIDDEN"
+    unreachable = "UNREACHABLE"
+    invalid_content = "INVALID_CONTENT"
+
 
 class Service(Base):
     __tablename__ = "services"
@@ -28,6 +26,7 @@ class Service(Base):
     url = Column(String, nullable=False, unique=True)
     is_active = Column(Boolean, default=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    keyword = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
