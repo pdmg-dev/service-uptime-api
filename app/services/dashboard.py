@@ -8,14 +8,15 @@ from sqlalchemy.orm import Session
 from app.models.service import Service, ServiceStatus
 
 
-def get_service_dashboard(db: Session, hours: int = 24):
+def get_service_dashboard(db: Session, hours: int = 24, user_id: int | None = None):
     time_threshold = datetime.now(timezone.utc) - timedelta(hours=hours)
+    query = db.query(Service)
+    if user_id:
+        query = query.filter(Service.user_id == user_id)
+    services = query.all()
+
     result = []
-
-    services = db.query(Service).all()
-
     for service in services:
-        # Recent status entries for this service
         entries = (
             db.query(ServiceStatus)
             .filter(
@@ -25,7 +26,6 @@ def get_service_dashboard(db: Session, hours: int = 24):
             .order_by(desc(ServiceStatus.checked_at))
             .all()
         )
-
         total = len(entries)
         up_count = sum(1 for e in entries if e.status == "UP")
         avg_response = (
@@ -33,16 +33,14 @@ def get_service_dashboard(db: Session, hours: int = 24):
             if total > 0
             else None
         )
-        last_status = entries[0].status if entries else None
-        last_checked = entries[0].checked_at if entries else None
 
         result.append(
             {
                 "id": service.id,
                 "name": service.name,
                 "url": service.url,
-                "last_checked_at": last_checked,
-                "last_status": last_status,
+                "last_checked_at": entries[0].checked_at if entries else None,
+                "last_status": entries[0].status if entries else None,
                 "uptime_percent": round((up_count / total) * 100, 2)
                 if total > 0
                 else 0.0,
@@ -51,5 +49,4 @@ def get_service_dashboard(db: Session, hours: int = 24):
                 else None,
             }
         )
-
     return result
