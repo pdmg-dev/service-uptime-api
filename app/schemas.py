@@ -2,12 +2,12 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, HttpUrl
 
 
 class ServiceCreate(BaseModel):
     name: str
-    url: str
+    url: HttpUrl
 
 
 class ServiceOut(BaseModel):
