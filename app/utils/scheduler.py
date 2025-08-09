@@ -42,7 +42,7 @@ async def poll_services():
         logger.info("[Scheduler] Checking services...")
         try:
             with SessionLocal() as db:
-                services = db.query(Service).filter(Service.is_active == 1).all()
+                services = db.query(Service).filter(Service.is_active.is_(True)).all()
         except Exception as e:
             logger.error(f"[Scheduler Error] {e}")
         if services:
