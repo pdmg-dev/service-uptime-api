@@ -15,6 +15,7 @@ class ServiceOut(BaseModel):
     name: str
     url: str
     is_active: bool
+    user_id: int
 
     model_config = ConfigDict(from_attributes=True)
 
