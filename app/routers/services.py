@@ -1,21 +1,24 @@
 # app/routers/services.py
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-from .. import models, schemas
-from ..database import get_db
-from ..utils.aggregator import get_service_dashboard
 import logging
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.schemas.service import ServiceCreate, ServiceOut
+from app.core.dependencies import get_db
+from app.services.checker import check_service
+from app.models.service import Service, ServiceState, ServiceStatus
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/services", tags=["services"])
+router = APIRouter(prefix="/services", tags=["Services"])
 
-@router.post("/", response_model=schemas.ServiceOut)
-def create_service(service: schemas.ServiceCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=ServiceOut)
+def create_service(service: ServiceCreate, db: Session = Depends(get_db)):
     try:
-        db_service = models.Service(name=service.name, url=service.url)
+        db_service = Service(name=service.name, url=str(service.url), is_active=True)
         db.add(db_service)
         db.commit()
         db.refresh(db_service)
@@ -30,29 +33,27 @@ def create_service(service: schemas.ServiceCreate, db: Session = Depends(get_db)
         raise HTTPException(status_code=500, detail="Interna server error")
 
 
-@router.get("/", response_model=list[schemas.ServiceOut])
+@router.get("/", response_model=list[ServiceOut])
 def list_services(db: Session = Depends(get_db)):
-    return db.query(models.Service).all()
+    return db.query(Service).all()
 
 
 @router.get("/{service_id}/status")
 async def check_status(service_id: int, db: Session = Depends(get_db)):
-    service = db.query(models.Service).filter(models.Service.id == service_id).first()
+    service = db.query(Service).filter(Service.id == service_id).first()
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
-
-    from ..utils.healthcheck import check_service
 
     status_str, response_time = await check_service(service.url)
 
     # Convert string to enum
     try:
-        status_enum = models.ServiceState(status_str)
+        status_enum = ServiceState(status_str)
     except ValueError:
         raise HTTPException(status_code=500, detail=f"Invalid status: {status_str}")
 
     # Store in DB
-    new_status = models.ServiceStatus(
+    new_status = ServiceStatus(
         service_id=service.id,
         status=status_enum,
         response_time=response_time,
@@ -70,14 +71,9 @@ async def check_status(service_id: int, db: Session = Depends(get_db)):
 @router.get("/{service_id}/status/history")
 def get_status_history(service_id: int, db: Session = Depends(get_db)):
     return (
-        db.query(models.ServiceStatus)
-        .filter(models.ServiceStatus.service_id == service_id)
-        .order_by(models.ServiceStatus.checked_at.desc())
+        db.query(ServiceStatus)
+        .filter(ServiceStatus.service_id == service_id)
+        .order_by(ServiceStatus.checked_at.desc())
         .limit(10)
         .all()
     )
-
-
-@router.get("/dashboard", response_model=list[schemas.ServiceDashboardOut])
-def dashboard(db: Session = Depends(get_db)):
-    return get_service_dashboard(db, hours=24)

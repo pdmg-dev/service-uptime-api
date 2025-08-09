@@ -1,8 +1,9 @@
-# app/models.py
+# app/models/service.py
 
 import enum
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Enum,
@@ -10,17 +11,15 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    Boolean,
 )
 from sqlalchemy.sql import func
 
-from .database import Base
+from app.core.database import Base
 
 
 class ServiceState(str, enum.Enum):
-    up = "up"
-    down = "down"
-
+    up = "UP"
+    down = "DOWN"
 
 class Service(Base):
     __tablename__ = "services"
@@ -38,14 +37,3 @@ class ServiceStatus(Base):
     status = Column(Enum(ServiceState), nullable=False)
     response_time = Column(Float, nullable=True)
     checked_at = Column(DateTime(timezone=True), server_default=func.now())
-
-
-class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True)
-    is_admin = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())

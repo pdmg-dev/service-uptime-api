@@ -1,9 +1,11 @@
+# app/services/dashboard.py
+
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from ..models import Service, ServiceStatus
+from app.models.service import Service, ServiceStatus
 
 
 def get_service_dashboard(db: Session, hours: int = 24):
@@ -25,7 +27,7 @@ def get_service_dashboard(db: Session, hours: int = 24):
         )
 
         total = len(entries)
-        up_count = sum(1 for e in entries if e.status == "up")
+        up_count = sum(1 for e in entries if e.status == "UP")
         avg_response = (
             sum(e.response_time for e in entries if e.response_time is not None) / total
             if total > 0

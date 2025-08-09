@@ -1,8 +1,8 @@
-# app/schemas.py
+# app/schemas/service.py
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, HttpUrl, EmailStr
+from pydantic import BaseModel, ConfigDict, HttpUrl
 
 
 class ServiceCreate(BaseModel):
@@ -14,6 +14,7 @@ class ServiceOut(BaseModel):
     id: int
     name: str
     url: str
+    is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,24 +29,3 @@ class ServiceDashboardOut(BaseModel):
     average_response_time_ms: float | None
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class RegisterIn(BaseModel):
-    username: str
-    email: EmailStr
-    password: str
-
-
-class LoginIn(BaseModel):
-    username: str
-    password: str
-
-
-class TokenData(BaseModel):
-    username: str
-    email: str
-
-
-class TokenOut(BaseModel):
-    access_token: str
-    token_type: str = "bearer" 

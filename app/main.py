@@ -1,28 +1,28 @@
 # app/main.py
 
 import asyncio
-import os
-import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from .database import Base, engine
-from .routers import services
-from .utils.scheduler import poll_services
-from .routers import auth
+from app.core.database import Base, engine
+from app.routers import auth, services, dashboard
+from app.services.scheduler import poll_services
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
-)
+# DB Initialization
+Base.metadata.create_all(bind=engine)
 
-if os.getenv("ENV", "dev") == "dev":
-    Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(FastAPI):
+    asyncio.create_task(poll_services())
+    yield
+
+
+app = FastAPI(title="Service Uptime API", lifespan=lifespan)
+
+# Routers
 app.include_router(services.router)
 app.include_router(auth.router)
+app.include_router(dashboard.router)
 
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(poll_services())
