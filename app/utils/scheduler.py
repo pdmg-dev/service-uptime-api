@@ -30,7 +30,8 @@ async def check_and_store(service: Service):
             )
             db.add(new_status)
             db.commit()
-        logger.info(f"Checked {service.name} → {status} ({response_time} ms)")
+        rt_display = f"{response_time:.2f} ms" if response_time else "N/A"
+        logger.info(f"Checked {service.name} → {status} ({rt_display} ms)")
     except Exception as e:
         logger.error(f"[Check Error] {service.name}: {e}")
 
@@ -44,6 +45,8 @@ async def poll_services():
                 services = db.query(Service).filter(Service.is_active == 1).all()
         except Exception as e:
             logger.error(f"[Scheduler Error] {e}")
-
-        await asyncio.gather(*(check_and_store(s) for s in services))
+        if services:
+            await asyncio.gather(*(check_and_store(s) for s in services))
+        else:
+            logger.info("[Scheduler] No active services to check.")    
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
