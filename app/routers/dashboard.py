@@ -3,12 +3,18 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user, get_db
+from app.models.user import User
 from app.schemas.service import ServiceDashboardOut
-from app.core.dependencies import get_db
 from app.services.dashboard import get_service_dashboard
 
 router = APIRouter(prefix="/status", tags=["Public"])
 
+
 @router.get("/dashboard", response_model=list[ServiceDashboardOut])
-def dashboard(db: Session = Depends(get_db)):
-    return get_service_dashboard(db, hours=24)
+def dashboard(
+    hours: int = 24,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_service_dashboard(db, hours=hours, user_id=current_user.id)
