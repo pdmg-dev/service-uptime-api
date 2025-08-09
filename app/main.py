@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.database import Base, engine
-from app.routers import auth, services, dashboard
+from app.routers import auth, dashboard, services
+from app.services import checker
 from app.services.scheduler import poll_services
 
 # DB Initialization
@@ -17,6 +18,7 @@ Base.metadata.create_all(bind=engine)
 async def lifespan(FastAPI):
     asyncio.create_task(poll_services())
     yield
+    await checker.client.aclose()
 
 
 app = FastAPI(title="Service Uptime API", lifespan=lifespan)
