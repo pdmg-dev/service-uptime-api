@@ -1,6 +1,5 @@
 # app/deps.py
 
-from app.models.user import User
 from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -8,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.security import oauth2_scheme
+from app.models.user import User
 
 
 def get_db():

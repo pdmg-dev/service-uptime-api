@@ -2,9 +2,8 @@
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+
 from fastapi.security import OAuth2PasswordBearer
-
-
 from jose import jwt
 from passlib.context import CryptContext
 
