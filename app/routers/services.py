@@ -2,12 +2,14 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from sqlalchemy.exc import IntegrityError
 from .. import database, models, schemas
 from ..utils.aggregator import get_service_dashboard
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/services", tags=["services"])
-
 
 def get_db():
     db = database.SessionLocal()
@@ -19,11 +21,20 @@ def get_db():
 
 @router.post("/", response_model=schemas.ServiceOut)
 def create_service(service: schemas.ServiceCreate, db: Session = Depends(get_db)):
-    db_service = models.Service(name=service.name, url=service.url)
-    db.add(db_service)
-    db.commit()
-    db.refresh(db_service)
-    return db_service
+    try:
+        db_service = models.Service(name=service.name, url=service.url)
+        db.add(db_service)
+        db.commit()
+        db.refresh(db_service)
+        return db_service
+    except IntegrityError:
+        db.rollback()
+        logger.warning(f"Duplicate service URL attempted: {service.url}")
+        raise HTTPException(status_code=400, detail="Service URL already exists")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating serviec: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Interna server error")
 
 
 @router.get("/", response_model=list[schemas.ServiceOut])
