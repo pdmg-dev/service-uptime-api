@@ -7,9 +7,14 @@ from pydantic import BaseModel, ConfigDict, HttpUrl
 from app.models.service import ServiceState
 
 
-class ServiceCreate(BaseModel):
+class ServiceIn(BaseModel):
     name: str
     url: HttpUrl
+
+
+class ServiceUpdate(BaseModel):
+    name: Optional[str] = None
+    is_active: Optional[str] = None
 
 
 class ServiceOut(BaseModel):
