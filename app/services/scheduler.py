@@ -1,20 +1,17 @@
-# app/utils/scheduler.py
-
 import asyncio
 import time
+from collections import defaultdict, Counter
 
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.logging import logging
 from app.models.service import Service, ServiceStatus
 from app.services.checker import check_service
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
 
 async def store_result(service: Service, status: str, response_time: float | None):
-    """Persist the result of a service check to the database."""
     db = SessionLocal()
     try:
         new_status = ServiceStatus(
@@ -64,7 +61,7 @@ async def poll_services():
             check_tasks = [
                 check_service(
                     url,
-                    keyword=url_to_services[url][0].keyword,  # assumes same keyword per URL
+                    keyword=url_to_services[url][0].keyword,
                     slow_threshold_ms=settings.slow_threshold_ms,
                 )
                 for url in url_to_services
@@ -74,9 +71,9 @@ async def poll_services():
                 timeout=settings.poll_timeout_seconds,
             )
 
-            # Map results back to services
-            success_count = 0
-            failure_count = 0
+            # Persist results concurrently
+            persist_tasks = []
+            status_counter = Counter()
             for url, result in zip(url_to_services.keys(), url_results):
                 if isinstance(result, Exception):
                     logger.exception("[Check Error] %s: %s", url, result)
@@ -84,17 +81,15 @@ async def poll_services():
                 else:
                     status, response_time = result
 
+                status_counter[status] += len(url_to_services[url])
                 for service in url_to_services[url]:
-                    await store_result(service, status, response_time)
-                    if status not in ("ERROR", None):
-                        success_count += 1
-                    else:
-                        failure_count += 1
+                    persist_tasks.append(store_result(service, status, response_time))
+
+            await asyncio.gather(*persist_tasks)
 
             elapsed = time.perf_counter() - start
-            logger.info(
-                f"[Scheduler] Checked {len(services)} services in {elapsed:.2f}s → {success_count} OK, {failure_count} Failed"
-            )
+            status_summary = ", ".join(f"{count} {status}" for status, count in status_counter.items())
+            logger.info(f"[Scheduler] Checked {len(services)} services in {elapsed:.2f}s → {status_summary}")
             last_scheduler_run = time.time()
 
         except asyncio.TimeoutError:
