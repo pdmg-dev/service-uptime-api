@@ -4,14 +4,27 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone
+from typing import Tuple, Optional
 
 import httpx
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
-# Shared async client and semaphore
-client = httpx.AsyncClient(timeout=5.0)
-semaphore = asyncio.Semaphore(10)
+_limits = httpx.Limits(max_connections=None, max_keepalive_connections=20)
+client = httpx.AsyncClient(timeout=settings.http_timeout_seconds, limits=_limits)
+
+semaphore = asyncio.Semaphore(settings.poll_concurrency)
+
+
+async def _perform_request(
+    url: str,
+) -> Tuple[int, Optional[float], Optional[httpx.Response]]:
+    start = time.perf_counter()
+    response = await client.get(url)
+    elapsed_ms = (time.perf_counter() - start) * 1000.0
+    return response.status_code, elapsed_ms, response
 
 
 async def check_service(
@@ -20,37 +33,42 @@ async def check_service(
     delay: float = 0.5,
     keyword: str | None = None,
     slow_threshold_ms: float = 2000.0,
-):
+) -> Tuple[str, Optional[float]]:
     async with semaphore:
         start_time = datetime.now(timezone.utc)
-        logger.info(f"[Start] Checking {url} at {start_time.isoformat()}")
+        logger.debug(f"[Start] Checking {url} at {start_time.isoformat()}")
 
         for attempt in range(1, retries + 1):
             try:
-                start = time.perf_counter()
-                response = await client.get(url)
-                response_time = (time.perf_counter() - start) * 1000
+                code, response_time, response = await _perform_request(url)
 
-                # Classify status
+                # Default status
                 status = "DOWN"
-                code = response.status_code
 
                 if 200 <= code < 400:
                     status = "UP"
-                    if response_time > slow_threshold_ms:
+                    if response_time and response_time > slow_threshold_ms:
                         status = "SLOW"
-                    if keyword and keyword not in response.text:
-                        status = "INVALID_CONTENT"
+
+                    if keyword:
+                        try:
+                            body_text = response.text
+                        except Exception:
+                            body_text = ""
+                        if keyword not in (body_text or ""):
+                            status = "INVALID_CONTENT"
                 elif code == 429:
                     status = "LIMITED"
                 elif code in (401, 403):
                     status = "FORBIDDEN"
+                else:
+                    status = "DOWN"
 
                 if status != "UP":
                     logger.warning(f"Service {url} returned {code} → {status}")
 
                 end_time = datetime.now(timezone.utc)
-                logger.info(
+                logger.debug(
                     f"[End] {url} at {end_time.isoformat()} → {status} ({response_time:.2f} ms)"
                 )
                 return status, response_time
@@ -63,5 +81,5 @@ async def check_service(
                 return "UNREACHABLE", None
 
             except Exception as e:
-                logger.error(f"Unhandled error for {url}: {e}")
+                logger.exception(f"Unhandled error for {url}: {e}")
                 return "DOWN", None
