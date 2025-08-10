@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    UniqueConstraint,
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -33,9 +34,11 @@ class Service(Base):
     """ORM model representing a monitored service."""
 
     __tablename__ = "services"
+    __table_args__ = (UniqueConstraint("url", "user_id", name="uniq_user_service"),)
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    url = Column(String, nullable=False, unique=True)
+    url = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     user_id = Column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
@@ -47,7 +50,7 @@ class Service(Base):
     statuses = relationship(
         "ServiceStatus",
         back_populates="service",
-        cascade="all, delete-orphan",
+        cascade="all, delete",
         passive_deletes=True,
     )
 
