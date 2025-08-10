@@ -62,20 +62,14 @@ async def check_service(
                 code, response_time, response = await _perform_request(url)
 
                 # Default status
-                status = "DOWN"
-
-                if 200 <= code < 400:
+                if code is None:
+                    status = "DOWN"
+                elif 200 <= code < 400:
                     status = "UP"
                     if response_time and response_time > slow_threshold_ms:
                         status = "SLOW"
-
-                    if keyword:
-                        try:
-                            body_text = response.text
-                        except Exception:
-                            body_text = ""
-                        if keyword not in (body_text or ""):
-                            status = "INVALID_CONTENT"
+                    if keyword and keyword not in (response or ""):
+                        status = "INVALID_CONTENT"
                 elif code == 429:
                     status = "LIMITED"
                 elif code in (401, 403):
