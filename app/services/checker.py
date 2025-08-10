@@ -2,11 +2,12 @@
 
 import asyncio
 import logging
-import time
+import random
 from datetime import datetime, timezone
 from typing import Tuple, Optional
 
 import httpx
+import ssl
 
 from app.core.config import settings
 
@@ -19,12 +20,26 @@ semaphore = asyncio.Semaphore(settings.poll_concurrency)
 
 
 async def _perform_request(
-    url: str,
-) -> Tuple[int, Optional[float], Optional[httpx.Response]]:
-    start = time.perf_counter()
-    response = await client.get(url)
-    elapsed_ms = (time.perf_counter() - start) * 1000.0
-    return response.status_code, elapsed_ms, response
+    url: str, retries: int = 3, base_delay: float = 0.5
+) -> Tuple[Optional[int], Optional[float], Optional[str]]:
+    attempt = 0
+    while attempt < retries:
+        start = asyncio.get_event_loop().time()
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                response = await client.get(url)
+                elapsed = (asyncio.get_event_loop().time() - start) * 1000
+                return response.status_code, elapsed, response.text
+
+        except (httpx.RequestError, httpx.TimeoutException, ssl.SSLError) as e:
+            wait_time = base_delay * (2**attempt) + random.uniform(0, 0.3)
+            print(
+                f"[WARN] Attempt {attempt + 1}/{retries} for {url} failed: {e} → retrying in {wait_time:.2f}s"
+            )
+            await asyncio.sleep(wait_time)
+            attempt += 1
+
+    return None, None, None
 
 
 async def check_service(
