@@ -15,6 +15,6 @@ engine = create_engine(
     else {},
 )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, expires_on_commit=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
 
 Base = declarative_base()
