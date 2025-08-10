@@ -29,10 +29,9 @@ async def _perform_request(
     while attempt < retries:
         start = asyncio.get_event_loop().time()
         try:
-            async with httpx.AsyncClient(timeout=5) as client:
-                response = await client.get(url)
-                elapsed = (asyncio.get_event_loop().time() - start) * 1000
-                return response.status_code, elapsed, response.text
+            response = await client.get(url)
+            elapsed = (asyncio.get_event_loop().time() - start) * 1000
+            return response.status_code, elapsed, response.text
 
         except (httpx.RequestError, httpx.TimeoutException, ssl.SSLError) as e:
             wait_time = base_delay * (2**attempt) + random.uniform(0, 0.3)
