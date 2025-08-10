@@ -36,12 +36,12 @@ def create_service(
         return db_service
     except IntegrityError:
         db.rollback()
-        logger.warning(f"Duplicate service URL attempted: {service.url}")
+        logger.warning("Duplicate service URL attempted: %s", service.url)
         raise HTTPException(status_code=400, detail="Service URL already exists")
-    except Exception as e:
+    except Exception:
         db.rollback()
-        logger.error(f"Error creating serviec: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Interna server error")
+        logger.exception("Error creating service")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/", response_model=list[ServiceOut])
@@ -59,10 +59,11 @@ async def check_status(service_id: int, db: Session = Depends(get_db)):
 
     status_str, response_time = await check_service(service.url)
 
-    # Convert string to enum
+    # Convert string to enum (validate)
     try:
         status_enum = ServiceState(status_str)
     except ValueError:
+        logger.error("Invalid status returned by checker: %s", status_str)
         raise HTTPException(status_code=500, detail=f"Invalid status: {status_str}")
 
     # Store in DB
