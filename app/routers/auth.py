@@ -14,8 +14,8 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/register", response_model=RegisterOut)
 def register(data: RegisterIn, db: Session = Depends(get_db)) -> RegisterOut:
-    user = register_user(data, db)
-    return RegisterOut.model_validate(user)
+    registered_user = register_user(data, db)
+    return RegisterOut.model_validate(registered_user)
 
 
 @router.post("/login", response_model=TokenOut)
