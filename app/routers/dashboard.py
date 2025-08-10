@@ -16,5 +16,6 @@ def dashboard(
     hours: int = 24,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list[ServiceDashboardOut]:
+    """Returns a dashboard summary of service statuses for the current user."""
     return get_service_dashboard(db, hours=hours, user_id=current_user.id)

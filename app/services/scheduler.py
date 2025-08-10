@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 async def check_and_store(service: Service) -> dict:
+    """ Checks the status of a service and stores the result in the database."""
     try:
         status, response_time = await check_service(
             service.url,

@@ -1,17 +1,22 @@
 # app/api/routes/health.py
-from fastapi import APIRouter
-from app.services import scheduler
 import time
+
+from fastapi import APIRouter
+
 from app.core.config import settings
+from app.services import scheduler
 
 router = APIRouter()
 
+
 @router.get("/health", summary="Scheduler Health Status")
-async def health_check():
+async def health_check() -> dict:
+    """Returns the health status of the background scheduler."""
     now = time.time()
     last_run = scheduler.last_scheduler_run
 
     if last_run is None:
+        # Scheduler hasn't run yet
         return {"status": "starting", "last_scheduler_run": None}
 
     seconds_since_last = now - last_run
@@ -20,5 +25,5 @@ async def health_check():
     return {
         "status": "healthy" if healthy else "unhealthy",
         "last_scheduler_run": last_run,
-        "seconds_since_last_run": round(seconds_since_last, 2)
+        "seconds_since_last_run": round(seconds_since_last, 2),
     }

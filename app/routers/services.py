@@ -22,7 +22,8 @@ def create_service(
     service: ServiceCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> ServiceOut:
+    """Creates a new service entry for the authenticated user."""
     try:
         db_service = Service(
             name=service.name,
@@ -47,26 +48,29 @@ def create_service(
 @router.get("/", response_model=list[ServiceOut])
 def list_services(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
-):
+) -> list[ServiceOut]:
+    """Lists all services owned by the authenticated user."""
     return db.query(Service).filter(Service.user_id == current_user.id).all()
 
 
 @router.get("/{service_id}/status")
-async def check_status(service_id: int, db: Session = Depends(get_db)):
+async def check_status(service_id: int, db: Session = Depends(get_db)) -> dict:
+    """Checks the current status of a specific service by ID."""
     service = db.query(Service).filter(Service.id == service_id).first()
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
+    # Perform async status check
     status_str, response_time = await check_service(service.url)
 
-    # Convert string to enum (validate)
+    # Validate status string against enum
     try:
         status_enum = ServiceState(status_str)
     except ValueError:
         logger.error("Invalid status returned by checker: %s", status_str)
         raise HTTPException(status_code=500, detail=f"Invalid status: {status_str}")
 
-    # Store in DB
+    # Persist status result
     new_status = ServiceStatus(
         service_id=service.id,
         status=status_enum,
@@ -83,7 +87,10 @@ async def check_status(service_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{service_id}/status/history")
-def get_status_history(service_id: int, db: Session = Depends(get_db)):
+def get_status_history(
+    service_id: int, db: Session = Depends(get_db)
+) -> list[ServiceStatus]:
+    """Retrieves the 10 most recent status checks for a given service."""
     return (
         db.query(ServiceStatus)
         .filter(ServiceStatus.service_id == service_id)

@@ -8,13 +8,14 @@ from app.core.dependencies import get_db
 from app.core.security import (create_access_token, get_password_hash,
                                verify_password)
 from app.models.user import User
-from app.schemas.auth import RegisterIn, TokenOut
+from app.schemas.auth import RegisterIn, RegisterOut, TokenOut
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-@router.post("/register", response_model=dict)
-def register(user_in: RegisterIn, db: Session = Depends(get_db)):
+@router.post("/register", response_model=RegisterOut)
+def register(user_in: RegisterIn, db: Session = Depends(get_db)) -> RegisterOut:
+    """Registers a new user if username and email are unique."""
     if db.query(User).filter(User.username == user_in.username).first():
         raise HTTPException(status_code=400, detail="Username already registered")
     if db.query(User).filter(User.email == user_in.email).first():
@@ -30,13 +31,14 @@ def register(user_in: RegisterIn, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {"message": "user created", "username": user.username}
+    return RegisterOut(user.username, user.email)
 
 
 @router.post("/login", response_model=TokenOut)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
-):
+) -> TokenOut:
+    """Authenticates a user and returns a JWT access token."""
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")

@@ -3,25 +3,28 @@
 import asyncio
 import logging
 import random
+import ssl
 from datetime import datetime, timezone
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 import httpx
-import ssl
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Configure HTTP client limits
 _limits = httpx.Limits(max_connections=None, max_keepalive_connections=20)
 client = httpx.AsyncClient(timeout=settings.http_timeout_seconds, limits=_limits)
 
+# Concurrency control for service checks
 semaphore = asyncio.Semaphore(settings.poll_concurrency)
 
 
 async def _perform_request(
     url: str, retries: int = 3, base_delay: float = 0.5
 ) -> Tuple[Optional[int], Optional[float], Optional[str]]:
+    """Performs an HTTP GET request with retry logic and exponential backoff."""
     attempt = 0
     while attempt < retries:
         start = asyncio.get_event_loop().time()
@@ -49,6 +52,7 @@ async def check_service(
     keyword: str | None = None,
     slow_threshold_ms: float = 2000.0,
 ) -> Tuple[str, Optional[float]]:
+    """Checks the health of a service by performing an HTTP request and analyzing the response."""
     async with semaphore:
         start_time = datetime.now(timezone.utc)
         logger.debug(f"[Start] Checking {url} at {start_time.isoformat()}")

@@ -7,6 +7,8 @@ from app.core.database import Base
 
 
 class User(Base):
+    """ORM model representing a registered user in the system."""
+
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)

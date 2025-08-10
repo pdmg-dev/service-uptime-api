@@ -1,12 +1,19 @@
 # app/schemas/auth.py
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class RegisterIn(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+
+class RegisterOut(BaseModel):
+    username: str
+    email: EmailStr
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LoginIn(BaseModel):

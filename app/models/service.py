@@ -10,6 +10,8 @@ from app.core.database import Base
 
 
 class ServiceState(str, enum.Enum):
+    """Enum representing possible states of a monitored service."""
+
     up = "UP"
     down = "DOWN"
     slow = "SLOW"
@@ -20,6 +22,8 @@ class ServiceState(str, enum.Enum):
 
 
 class Service(Base):
+    """ORM model representing a monitored service."""
+
     __tablename__ = "services"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
@@ -31,6 +35,8 @@ class Service(Base):
 
 
 class ServiceStatus(Base):
+    """ORM model representing the status check result of a service."""
+
     __tablename__ = "service_status"
     id = Column(Integer, primary_key=True, index=True)
     service_id = Column(Integer, ForeignKey("services.id"), nullable=False)

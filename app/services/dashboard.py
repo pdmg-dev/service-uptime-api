@@ -5,11 +5,16 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.models.service import Service, ServiceStatus, ServiceState
+from app.models.service import Service, ServiceState, ServiceStatus
 
 
-def get_service_dashboard(db: Session, hours: int = 24, user_id: int | None = None):
+def get_service_dashboard(
+    db: Session, hours: int = 24, user_id: int | None = None
+) -> list[dict]:
+    """Aggregates service status data for dashboard display."""
     time_threshold = datetime.now(timezone.utc) - timedelta(hours=hours)
+
+    # Fetch services (optionally filtered by user)
     query = db.query(Service)
     if user_id is not None:
         query = query.filter(Service.user_id == user_id)
@@ -17,6 +22,7 @@ def get_service_dashboard(db: Session, hours: int = 24, user_id: int | None = No
 
     result = []
     for service in services:
+        # Fetch recent status entries for the service
         entries = (
             db.query(ServiceStatus)
             .filter(
@@ -26,9 +32,11 @@ def get_service_dashboard(db: Session, hours: int = 24, user_id: int | None = No
             .order_by(desc(ServiceStatus.checked_at))
             .all()
         )
-        
+
         total = len(entries)
         up_count = sum(1 for e in entries if e.status == ServiceState.up)
+
+        # Compute average response time
         response_times = [
             e.response_time for e in entries if e.response_time is not None
         ]
@@ -40,6 +48,7 @@ def get_service_dashboard(db: Session, hours: int = 24, user_id: int | None = No
             else None
         )
 
+        # Build dashboard entry
         result.append(
             {
                 "id": service.id,
