@@ -56,6 +56,7 @@ async def check_and_store(service: Service) -> dict:
 
 
 async def poll_services():
+    global last_scheduler_run
     while True:
         logger.info("[Scheduler] Checking services...")
         start = time.perf_counter()
@@ -92,7 +93,7 @@ async def poll_services():
             logger.info(
                 f"[Scheduler] Checked {len(services)} services in {elapsed:.2f}s → {success_count} OK, {failure_count} Failed"
             )
-
+            last_scheduler_run = time.time()
         except asyncio.TimeoutError:
             logger.warning("[Scheduler] Timeout while checking services.")
 
