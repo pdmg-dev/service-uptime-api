@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.database import Base, engine
-from app.routers import auth, dashboard, health, services
+from app.routers import auth, dashboard, health, service
 from app.services import checker
 from app.services.scheduler import poll_services
 
@@ -27,7 +27,7 @@ async def lifespan(FastAPI):
 app = FastAPI(title="Service Uptime API", lifespan=lifespan)
 
 # Register routers
-app.include_router(services.router)
+app.include_router(service.router)
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(health.router)

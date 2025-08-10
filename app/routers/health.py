@@ -1,4 +1,4 @@
-# app/api/routes/health.py
+# app/routes/health.py
 import time
 
 from fastapi import APIRouter
