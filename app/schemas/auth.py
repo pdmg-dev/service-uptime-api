@@ -16,11 +16,6 @@ class RegisterOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class LoginIn(BaseModel):
-    username: str
-    password: str
-
-
 class TokenData(BaseModel):
     username: str
     email: str
