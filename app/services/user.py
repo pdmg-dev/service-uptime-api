@@ -24,12 +24,12 @@ def register_user(data: RegisterIn, db: Session) -> User:
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = get_password_hash(data.password)
-    user = save_user(
+    user = User(
         **data.model_dump(exclude="password"),
         hashed_password=hashed_password,
-        db=db,
     )
+    saved_user = save_user(user, db)
     logger.info(
         f"New user registered: username='{user.username}', email='{user.email}'"
     )
-    return user
+    return saved_user
