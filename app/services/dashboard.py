@@ -5,13 +5,13 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.models.service import Service, ServiceStatus
+from app.models.service import Service, ServiceStatus, ServiceState
 
 
 def get_service_dashboard(db: Session, hours: int = 24, user_id: int | None = None):
     time_threshold = datetime.now(timezone.utc) - timedelta(hours=hours)
     query = db.query(Service)
-    if user_id:
+    if user_id is not None:
         query = query.filter(Service.user_id == user_id)
     services = query.all()
 
@@ -26,10 +26,16 @@ def get_service_dashboard(db: Session, hours: int = 24, user_id: int | None = No
             .order_by(desc(ServiceStatus.checked_at))
             .all()
         )
+        
         total = len(entries)
-        up_count = sum(1 for e in entries if e.status == "UP")
+        up_count = sum(1 for e in entries if e.status == ServiceState.up)
+        response_times = [
+            e.response_time for e in entries if e.response_time is not None
+        ]
         avg_response = (
-            sum(e.response_time for e in entries if e.response_time is not None) / total
+            sum(response_times) / len(response_times)
+            if response_times
+            else None
             if total > 0
             else None
         )
@@ -45,7 +51,7 @@ def get_service_dashboard(db: Session, hours: int = 24, user_id: int | None = No
                 if total > 0
                 else 0.0,
                 "average_response_time_ms": round(avg_response, 2)
-                if avg_response
+                if avg_response is not None
                 else None,
             }
         )
