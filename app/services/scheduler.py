@@ -20,7 +20,8 @@ async def check_and_store(service: Service) -> dict:
             slow_threshold_ms=settings.slow_threshold_ms,
         )
 
-        with SessionLocal() as db:
+        db = SessionLocal()
+        try:
             new_status = ServiceStatus(
                 service_id=service.id,
                 status=status,
@@ -28,6 +29,12 @@ async def check_and_store(service: Service) -> dict:
             )
             db.add(new_status)
             db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("Failed to persist status for %s", service.name)
+            return {"service": service.name, "status": "ERROR", "response_time": None}
+        finally:
+            db.close()
 
         rt_display = f"{response_time:.2f}" if response_time else "N/A"
         logger.info(f"Checked {service.name} → {status} ({rt_display} ms)")
@@ -39,7 +46,7 @@ async def check_and_store(service: Service) -> dict:
         }
 
     except Exception as e:
-        logger.error(f"[Check Error] {service.name}: {e}")
+        logger.exception("[Check Error] %s: %s", service.name, e)
         return {
             "service": service.name,
             "status": "ERROR",
@@ -53,13 +60,14 @@ async def poll_services():
         logger.info("[Scheduler] Checking services...")
         start = time.perf_counter()
 
+        db = SessionLocal()
         try:
-            with SessionLocal() as db:
-                services = db.query(Service).filter(Service.is_active.is_(True)).all()
+            services = db.query(Service).filter(Service.is_active.is_(True)).all()
         except Exception as e:
-            logger.error(f"[Scheduler Error] Failed to fetch services: {e}")
-            await asyncio.sleep(settings.poll_interval_seconds)
-            continue
+            logger.exception("[Scheduler Error] Failed to fetch services: %s", e)
+            services = []
+        finally:
+            db.close()
 
         if not services:
             logger.info("[Scheduler] No active services to check.")
@@ -74,10 +82,11 @@ async def poll_services():
                 timeout=settings.poll_timeout_seconds,
             )
 
-            # Summary logging
             elapsed = time.perf_counter() - start
             success_count = sum(
-                1 for r in results if isinstance(r, dict) and r["status"] != "ERROR"
+                1
+                for r in results
+                if isinstance(r, dict) and r.get("status") not in ("ERROR", None)
             )
             failure_count = len(services) - success_count
             logger.info(
