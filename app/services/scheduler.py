@@ -1,33 +1,35 @@
 import asyncio
 import time
 from collections import defaultdict, Counter
-
+from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.logging import logging
-from app.models.service import Service, ServiceStatus
+from app.models.service import Service, ServiceStatus, ServiceState
 from app.services.checker import check_service
 
 logger = logging.getLogger(__name__)
 
 
-async def store_result(service: Service, status: str, response_time: float | None):
-    db = SessionLocal()
-    try:
-        new_status = ServiceStatus(
-            service_id=service.id,
-            status=status,
-            response_time=response_time,
-        )
-        db.add(new_status)
-        db.commit()
-        rt_display = f"{response_time:.2f}" if response_time else "N/A"
-        logger.info(f"Checked {service.name} → {status} ({rt_display} ms)")
-    except Exception:
-        db.rollback()
-        logger.exception("Failed to persist status for %s", service.name)
-    finally:
-        db.close()
+async def store_results_batch(results: list[tuple[int, ServiceState, float | None]]):
+    """Persist multiple service check results in one transaction."""
+    def _store():
+        db: Session = SessionLocal()
+        try:
+            for service_id, status, response_time in results:
+                db.add(ServiceStatus(
+                    service_id=service_id,
+                    status=status,
+                    response_time=response_time,
+                ))
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("Failed to persist some statuses.")
+        finally:
+            db.close()
+
+    await asyncio.to_thread(_store)
 
 
 async def poll_services():
@@ -56,8 +58,8 @@ async def poll_services():
         for service in services:
             url_to_services[service.url].append(service)
 
-        # Check each unique URL once
         try:
+            # Run checks once per unique URL
             check_tasks = [
                 check_service(
                     url,
@@ -71,25 +73,31 @@ async def poll_services():
                 timeout=settings.poll_timeout_seconds,
             )
 
-            # Persist results concurrently
-            persist_tasks = []
+            # Prepare batch results
+            results_batch = []
             status_counter = Counter()
+
             for url, result in zip(url_to_services.keys(), url_results):
                 if isinstance(result, Exception):
                     logger.exception("[Check Error] %s: %s", url, result)
-                    status, response_time = "ERROR", None
+                    status, response_time = ServiceState.ERROR, None
                 else:
                     status, response_time = result
 
                 status_counter[status] += len(url_to_services[url])
                 for service in url_to_services[url]:
-                    persist_tasks.append(store_result(service, status, response_time))
+                    results_batch.append((service.id, status, response_time))
 
-            await asyncio.gather(*persist_tasks)
+            # Store all results in one DB commit
+            await store_results_batch(results_batch)
 
             elapsed = time.perf_counter() - start
-            status_summary = ", ".join(f"{count} {status}" for status, count in status_counter.items())
-            logger.info(f"[Scheduler] Checked {len(services)} services in {elapsed:.2f}s → {status_summary}")
+            status_summary = ", ".join(
+                f"{count} {status}" for status, count in status_counter.items()
+            )
+            logger.info(
+                f"[Scheduler] Checked {len(services)} services in {elapsed:.2f}s → {status_summary}"
+            )
             last_scheduler_run = time.time()
 
         except asyncio.TimeoutError:
