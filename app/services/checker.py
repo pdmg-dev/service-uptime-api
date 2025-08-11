@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 import httpx
 
 from app.core.config import settings
+from app.models.service import ServiceState
 
 logger = logging.getLogger(__name__)
 
@@ -23,26 +24,27 @@ client = httpx.AsyncClient(
 semaphore = asyncio.Semaphore(settings.poll_concurrency)
 
 
-def classify_status(
-    code: Optional[int],
-    response_time: Optional[float],
-    response: Optional[str],
-    keyword: Optional[str],
-    slow_threshold_ms: float,
-) -> str:
+def classify_status(code: int, response_time: Optional[float],
+                    keyword: Optional[str], response: Optional[str],
+                    slow_threshold_ms: int) -> ServiceState:
     if code is None:
-        return "SLOW" if response_time and response_time > slow_threshold_ms else "DOWN"
+        return ServiceState.UNREACHABLE
+
     if 200 <= code < 300:
         if keyword and keyword not in (response or ""):
-            return "INVALID_CONTENT"
-        return "SLOW" if response_time and response_time > slow_threshold_ms else "UP"
+            return ServiceState.INVALID_CONTENT
+        if response_time and response_time > slow_threshold_ms:
+            return ServiceState.SLOW
+        return ServiceState.UP
+
     if 300 <= code < 400:
-        return "REDIRECT"
+        return ServiceState.REDIRECT
     if code == 429:
-        return "LIMITED"
+        return ServiceState.LIMITED
     if code in (401, 403):
-        return "FORBIDDEN"
-    return "DOWN"
+        return ServiceState.FORBIDDEN
+
+    return ServiceState.DOWN
 
 
 async def _perform_request(
