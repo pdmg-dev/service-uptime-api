@@ -14,7 +14,7 @@ class ServiceIn(BaseModel):
 
 class ServiceUpdate(BaseModel):
     name: Optional[str] = None
-    is_active: Optional[str] = None
+    is_active: Optional[bool] = True
 
 
 class ServiceOut(BaseModel):

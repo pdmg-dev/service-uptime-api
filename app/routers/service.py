@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, get_db
 from app.models.user import User
-from app.schemas.service import ServiceIn, ServiceOut, ServiceStatusOut
+from app.schemas.service import ServiceIn, ServiceOut, ServiceStatusOut, ServiceUpdate
 from app.services.service import (
     register_service_url,
     list_services,
     check_service_status as check_status,
     get_service_status_history,
+    update_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,17 @@ def view_services(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ) -> list[ServiceOut]:
     return list_services(current_user.id, db)
+
+
+@router.put("/{service_id}/", response_model=ServiceOut)
+def update_service_details(
+    data: ServiceUpdate,
+    service_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    updated_service = update_service(data, service_id, db)
+    return ServiceOut.model_validate(updated_service)
 
 
 @router.get("/{service_id}/status", response_model=ServiceStatusOut)

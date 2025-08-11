@@ -38,7 +38,7 @@ def update_service(data: ServiceUpdate, service_id: int, db: Session) -> Service
         raise HTTPException(status_code=404, detail="Service not registered")
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(service, field, value)
-    updated_service = update(service)
+    updated_service = update(service, db)
     return updated_service
 
 
