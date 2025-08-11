@@ -3,19 +3,24 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user, get_db
-from app.models.user import User
-from app.schemas.service import ServiceDashboardOut
-from app.services.dashboard import get_service_dashboard
+from app.core.dependencies import get_db
+from app.services.dashboard import get_services_with_latest_status
 
 router = APIRouter(prefix="/status", tags=["Public"])
 
 
-@router.get("/dashboard", response_model=list[ServiceDashboardOut])
-def dashboard(
-    hours: int = 24,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> list[ServiceDashboardOut]:
-    """Returns a dashboard summary of service statuses for the current user."""
-    return get_service_dashboard(db, hours=hours, user_id=current_user.id)
+@router.get("/dashboard")
+def dashboard_status(db: Session = Depends(get_db)):
+    rows = get_services_with_latest_status(db)
+    return [
+        {
+            "id": service.id,
+            "name": service.name,
+            "url": service.url,
+            "status": status.status,
+            "response_time": status.response_time,
+            "checked_at": status.checked_at
+        }
+        for service, status in rows
+    ]
+
