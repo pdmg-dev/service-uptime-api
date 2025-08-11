@@ -39,7 +39,7 @@ def view_services(
     return list_services(current_user.id, db)
 
 
-@router.put("/{service_id}/", response_model=ServiceOut)
+@router.patch("/{service_id}/", response_model=ServiceOut)
 def update_service_details(
     data: ServiceUpdate,
     service_id: int,
