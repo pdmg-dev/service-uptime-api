@@ -14,6 +14,7 @@ from app.services.service import (
     check_service_status as check_status,
     get_service_status_history,
     update_service,
+    delete_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,15 @@ def update_service_details(
 ):
     updated_service = update_service(data, service_id, db)
     return ServiceOut.model_validate(updated_service)
+
+
+@router.delete("/{service_id}/")
+def delete_active_service(
+    service_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return delete_service(service_id, db)
 
 
 @router.get("/{service_id}/status", response_model=ServiceStatusOut)

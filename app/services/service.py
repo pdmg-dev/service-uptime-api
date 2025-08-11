@@ -7,10 +7,12 @@ from app.models.service import Service, ServiceState, ServiceStatus
 from app.repositories.service import (
     get_service_by_id,
     get_service_by_url_and_user,
-    get_services_by_user_id, get_status_history,
+    get_services_by_user_id,
+    get_status_history,
     save_service,
     save_status,
     update,
+    delete,
 )
 from app.schemas.service import ServiceIn, ServiceOut, ServiceUpdate
 from app.services.checker import check_service
@@ -42,6 +44,13 @@ def update_service(data: ServiceUpdate, service_id: int, db: Session) -> Service
     return updated_service
 
 
+def delete_service(service_id: int, db: Session) -> None:
+    service = get_service_by_id(service_id, db)
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not registered")
+    return delete(service, db)
+
+
 async def check_service_status(service_id: int, db: Session):
     service = get_service_by_id(service_id, db)
     if not service:
@@ -56,6 +65,7 @@ async def check_service_status(service_id: int, db: Session):
     )
     saved_status = save_status(new_status, db)
     return saved_status
+
 
 def get_service_status_history(service_id: int, db: Session):
     service = get_service_by_id(service_id, db)

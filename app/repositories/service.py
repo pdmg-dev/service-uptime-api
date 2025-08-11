@@ -46,3 +46,7 @@ def update(service: Service, db: Session) -> Service:
     db.commit()
     db.refresh(service)
     return service
+
+def delete(service: Service, db: Session) -> None:
+    db.delete(service)
+    db.commit()
