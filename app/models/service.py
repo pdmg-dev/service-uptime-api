@@ -19,15 +19,15 @@ from app.core.database import Base
 
 
 class ServiceState(str, enum.Enum):
-    """Enum representing possible states of a monitored service."""
-
-    up = "UP"
-    down = "DOWN"
-    slow = "SLOW"
-    limited = "LIMITED"
-    forbidden = "FORBIDDEN"
-    unreachable = "UNREACHABLE"
-    invalid_content = "INVALID_CONTENT"
+    UP = "UP"
+    DOWN = "DOWN"
+    SLOW = "SLOW"
+    LIMITED = "LIMITED"
+    FORBIDDEN = "FORBIDDEN"
+    UNREACHABLE = "UNREACHABLE"
+    INVALID_CONTENT = "INVALID_CONTENT"
+    REDIRECT = "REDIRECT"
+    ERROR = "ERROR"
 
 
 class Service(Base):
