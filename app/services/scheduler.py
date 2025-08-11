@@ -7,6 +7,8 @@ from app.core.database import SessionLocal
 from app.core.logging import logging
 from app.models.service import Service, ServiceStatus, ServiceState
 from app.services.checker import check_service
+from app.services.cleanup import cleanup_old_statuses
+
 
 logger = logging.getLogger(__name__)
 
@@ -102,5 +104,8 @@ async def poll_services():
 
         except asyncio.TimeoutError:
             logger.warning("[Scheduler] Timeout while checking services.")
+
+        # Perform cleanup at the end of each poll
+        await asyncio.to_thread(cleanup_old_statuses, days=30)
 
         await asyncio.sleep(settings.poll_interval_seconds)
