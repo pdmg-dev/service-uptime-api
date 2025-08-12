@@ -3,7 +3,7 @@
 from typing import Generator
 
 from fastapi import Depends, HTTPException, status
-from jose import JWTError, jwt
+from jose import JWTError, jwt, ExpiredSignatureError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -37,6 +37,8 @@ def get_current_user(
         user_email: str = payload.get("sub")
         if user_email is None:
             raise credentials_exception
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
     except JWTError:
         raise credentials_exception
 
