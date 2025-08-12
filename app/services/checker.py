@@ -17,34 +17,38 @@ _limits = httpx.Limits(max_connections=None, max_keepalive_connections=20)
 client = httpx.AsyncClient(
     timeout=settings.http_timeout_seconds,
     limits=_limits,
-    headers={"User-Agent": "Mozilla/5.0 (compatible; ServiceUptimeBot/1.0)"}
+    headers={"User-Agent": "Mozilla/5.0 (compatible; ServiceUptimeBot/1.0)"},
 )
 
 # Concurrency control for service checks
 semaphore = asyncio.Semaphore(settings.poll_concurrency)
 
 
-def classify_status(code: int, response_time: Optional[float],
-                    keyword: Optional[str], response: Optional[str],
-                    slow_threshold_ms: int) -> ServiceState:
+def classify_status(
+    code: int,
+    response_time: Optional[float],
+    keyword: Optional[str],
+    response: Optional[str],
+    slow_threshold_ms: int,
+) -> ServiceState:
     if code is None:
-        return ServiceState.UNREACHABLE
+        return ServiceState.UNREACHABLE.value
 
     if 200 <= code < 300:
         if keyword and keyword not in (response or ""):
-            return ServiceState.INVALID_CONTENT
+            return ServiceState.INVALID_CONTENT.value
         if response_time and response_time > slow_threshold_ms:
-            return ServiceState.SLOW
-        return ServiceState.UP
+            return ServiceState.SLOW.value
+        return ServiceState.UP.value
 
     if 300 <= code < 400:
         return ServiceState.REDIRECT
     if code == 429:
-        return ServiceState.LIMITED
+        return ServiceState.LIMITED.value
     if code in (401, 403):
-        return ServiceState.FORBIDDEN
+        return ServiceState.FORBIDDEN.value
 
-    return ServiceState.DOWN
+    return ServiceState.DOWN.value
 
 
 async def _perform_request(
@@ -62,11 +66,17 @@ async def _perform_request(
 
         except httpx.TimeoutException:
             last_elapsed = (asyncio.get_event_loop().time() - start) * 1000
-            logger.warning(f"[Timeout] Attempt {attempt + 1}/{retries} for {url} timed out after {last_elapsed:.2f} ms")
+            logger.warning(
+                f"[Timeout] Attempt {attempt + 1}/{retries} for {url} timed out after {last_elapsed:.2f} ms"
+            )
         except (httpx.RequestError, ssl.SSLError) as e:
-            logger.warning(f"[RequestError] Attempt {attempt + 1}/{retries} for {url} failed: {type(e).__name__} → {e}")
+            logger.warning(
+                f"[RequestError] Attempt {attempt + 1}/{retries} for {url} failed: {type(e).__name__} → {e}"
+            )
         except Exception as e:
-            logger.exception(f"[Unhandled] Attempt {attempt + 1}/{retries} for {url}: {e}")
+            logger.exception(
+                f"[Unhandled] Attempt {attempt + 1}/{retries} for {url}: {e}"
+            )
 
         delay = base_delay * (2**attempt) + random.uniform(0, 0.3)
         logger.debug(f"[Backoff] Retrying {url} in {delay:.2f}s")
@@ -89,7 +99,9 @@ async def check_service(
 
         try:
             code, response_time, response = await _perform_request(url, retries, delay)
-            status = classify_status(code, response_time, response, keyword, slow_threshold_ms)
+            status = classify_status(
+                code, response_time, keyword, response, slow_threshold_ms
+            )
 
             if status == "INVALID_CONTENT":
                 logger.warning(f"[ContentMismatch] {url} missing keyword '{keyword}'")
@@ -98,7 +110,9 @@ async def check_service(
 
             end_time = datetime.now(timezone.utc)
             rt_display = f"{response_time:.2f}" if response_time is not None else "N/A"
-            logger.debug(f"[End] {url} at {end_time.isoformat()} → {status} ({rt_display} ms)")
+            logger.debug(
+                f"[End] {url} at {end_time.isoformat()} → {status} ({rt_display} ms)"
+            )
             return status, response_time
 
         except Exception as e:

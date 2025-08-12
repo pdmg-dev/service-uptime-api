@@ -17,7 +17,7 @@ Base.metadata.create_all(bind=engine)
 
 
 @asynccontextmanager
-async def lifespan(FastAPI):
+async def lifespan(_app):
     """Lifespan context manager for FastAPI."""
     asyncio.create_task(poll_services())  # Start background service polling
     yield
