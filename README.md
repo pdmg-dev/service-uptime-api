@@ -7,7 +7,7 @@ It includes authentication, background polling, dashboard endpoints, and automat
 
 ## 🚀 Features
 
-- User Authentication (/auth/register, /auth/login) with JWT-based access tokens.
+- User Authentication with JWT-based access tokens.
 - Register Services with unique URL per user and optional keyword validation.
 - List Services with metadata.
 - Check Service Status on demand.
