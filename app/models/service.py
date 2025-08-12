@@ -38,7 +38,7 @@ class Service(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    url = Column(String, nullable=False)
+    url = Column(String(2048), nullable=False)
     is_active = Column(Boolean, default=True)
     user_id = Column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
