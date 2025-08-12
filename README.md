@@ -1,93 +1,69 @@
-# 🛠️ Service Uptime & Health Checker API (MVP)
+# 🛠️ Service Uptime API (MVP)
 
-A FastAPI-based backend service that allows users to register web services, list them, and check their real-time availability and response time. Built with SQLAlchemy, Alembic-ready models, and async HTTP checks via `httpx`.
+A FastAPI-based backend service that lets users register websites or APIs, check their availability in real-time, and track performance history.
+It includes authentication, background polling, dashboard endpoints, and automatic cleanup of old data.
 
-> This project is an MVP focused on core functionality. Future upgrades are still in progress.
+> This is an MVP version, but the architecture is ready for production-grade enhancements.
 
 ## 🚀 Features
 
-- **Register Services**: Add services with name and URL.
-- **List Services**: Retrieve all registered services.
-- **Check Service Status**: Perform live health checks and log status + response time.
-- **Async Health Checks**: Efficient non-blocking HTTP requests.
-- **Database Logging**: Persist service metadata and status history.
-
+- User Authentication (/auth/register, /auth/login) with JWT-based access tokens.
+- Register Services with unique URL per user and optional keyword validation.
+- List Services with metadata.
+- Check Service Status on demand.
+- Async Background Polling: Periodically checks all active services in the background.
+- Status Classification: Detects UP, DOWN, SLOW, UNREACHABLE, and other states.
+- Dashboard Endpoint: Returns latest status for all services.
+- Automatic Cleanup of old status records.
+- SQLite/PostgreSQL support (configurable via .env)
 
 ## 📦 Tech Stack
 
-| Layer         | Technology                  |
-|---------------|-----------------------------|
-| Framework     | FastAPI                     |
-| ORM           | SQLAlchemy                  |
-| HTTP Client   | httpx (async)               |
-| DB            | PostgreSQL (via SQLAlchemy) |
-| Env Mgmt      | python-dotenv               |
-| Migrations    | Alembic-ready               |
-
+| Layer       | Technology                       |
+| ----------- | -------------------------------- |
+| Framework   | FastAPI                          |
+| ORM         | SQLAlchemy                       |
+| DB          | SQLite / PostgreSQL (via URL)    |
+| HTTP Client | httpx (async)                    |
+| Auth        | OAuth2 + JWT (via `python-jose`) |
+| Passwords   | bcrypt (via `passlib`)           |
+| Env Mgmt    | pydantic-settings (`.env` file)  |
+| Migrations  | Alembic-ready models             |
+| Scheduler   | asyncio background task          |
 
 ## 📁 Project Structure
 
 ```bash
-app/ 
-├── main.py             # FastAPI app entrypoint 
-├── database.py         # DB engine & session setup
-├── models.py           # SQLAlchemy models
-├── schemas.py          # Pydantic schemas
-├── routers/ 
-│   └── services.py     # API routes for service management 
-└── utils/
-    └── healthcheck.py  # Async service status checker
+app/
+├── core/                # Config, DB, security, logging
+├── models/              # SQLAlchemy models (User, Service, ServiceStatus)
+├── repositories/        # DB access layer
+├── routers/             # API route handlers
+├── schemas/             # Pydantic models
+├── services/            # Business logic, polling, cleanup
+└── main.py              # FastAPI entry point
+run.py                   # Uvicorn launcher
 ```
 
 ## 🧪 API Endpoints
 
-### ➕ Create a Service
+### Auth
+- `POST /auth/register` → Register new user.
+- `POST /auth/login` → Get JWT token.
 
-`POST /services/`
+### Services (Auth Required)
+- `POST /services/` → Register a service.
+- `GET /services/` → List all services for current user.
+- `PATCH /services/{id}/` → Update service info.
+- `DELETE /services/{id}/` → Delete service.
+- `GET /services/{id}/status` → Check status now.
+- `GET /services/{id}/status/history` → View last 10 checks.
 
-```json
-{
-  "name": "Example Service",
-  "url": "https://example.com"
-}
-```
+### Public Dashboard
+- `GET /status/dashboard` → Latest status for all services.
 
-Response:
-```json
-{
-  "id": 1,
-  "name": "Example Service",
-  "url": "https://example.com"
-}
-```
-
-### 📋 List All Services
-
-`GET /services/`
-
-Response:
-```json
-[
-  {
-    "id": 1,
-    "name": "Example Service",
-    "url": "https://example.com"
-  }
-]
-```
-
-### 🔍 Check Service Status
-
-`GET /services/{service_id}/status`
-
-Response:
-```json
-{
-  "service": "Example Service",
-  "status": "UP",
-  "response_time_ms": 123.45
-}
-```
+### Health Check
+- `GET /health` → Scheduler health info.
 
 ## 🛠️ Setup & Run
 
@@ -112,20 +88,21 @@ pip install -r requirements.txt
 python run.py
 ```
 
-## 🧹 Alembic Migrations (Optional)
+5. Access API docs:
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
-If you're using Alembic for migrations:
-```bash
-alembic init alembic
-# Configure alembic.ini and env.py
-alembic revision --autogenerate -m "Initial migration"
-alembic upgrade head
-```
+## Background Polling
+- Runs every POLL_INTERVAL_SECONDS (default: 60s).
+- Checks all active services asynchronously.
+- Saves results in service_status table.
+- Deletes statuses older than 30 days.
 
 ## 📌 Notes
-- Health checks are performed asynchronously with a 5-second timeout.
-- Status logs are stored in the service_status table with timestamps.
-- Duplicate service URLs are prevented via a unique constraint.
+- Unique (url, user_id) constraint prevents duplicate registrations per user.
+- JWT tokens expire based on ACCESS_TOKEN_EXPIRE_MINUTES.
+- Optional keyword matching ensures response content contains expected text.
+- Supports both SQLite (dev) and PostgreSQL (prod).
 
 ## 📄 License
 
