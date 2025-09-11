@@ -19,4 +19,9 @@ class User(Base):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    services = relationship("Service", back_populates="owner", cascade="all, delete", passive_deletes=True)
+    services = relationship(
+        "Service",
+        back_populates="owner",
+        cascade="all, delete",
+        passive_deletes=True,
+    )

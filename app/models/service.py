@@ -13,8 +13,9 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
-from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
 from app.core.database import Base
 
 
@@ -34,7 +35,9 @@ class Service(Base):
     """ORM model representing a monitored service."""
 
     __tablename__ = "services"
-    __table_args__ = (UniqueConstraint("url", "user_id", name="uniq_user_service"),)
+    __table_args__ = (
+        UniqueConstraint("url", "user_id", name="uniq_user_service"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
@@ -70,4 +73,6 @@ class ServiceStatus(Base):
     response_time = Column(Float, nullable=True)
     checked_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    service = relationship("Service", back_populates="statuses", passive_deletes=True)
+    service = relationship(
+        "Service", back_populates="statuses", passive_deletes=True
+    )

@@ -11,9 +11,11 @@ engine = create_engine(
     settings.database_url,
     future=True,
     pool_pre_ping=True,  # Checks connection health before using
-    connect_args={"check_same_thread": False}
-    if settings.database_url.startswith("sqlite")
-    else {},
+    connect_args=(
+        {"check_same_thread": False}
+        if settings.database_url.startswith("sqlite")
+        else {}
+    ),
 )
 
 # Session factory for database interactions

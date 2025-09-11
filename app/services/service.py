@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.service import Service, ServiceState, ServiceStatus
 from app.repositories.service import (
+    delete,
     get_service_by_id,
     get_service_by_url_and_user,
     get_services_by_user_id,
@@ -12,16 +13,19 @@ from app.repositories.service import (
     save_service,
     save_status,
     update,
-    delete,
 )
 from app.schemas.service import ServiceIn, ServiceOut, ServiceUpdate
 from app.services.checker import check_service
 
 
-def register_service_url(data: ServiceIn, user_id: int, db: Session) -> Service:
+def register_service_url(
+    data: ServiceIn, user_id: int, db: Session
+) -> Service:
     service = get_service_by_url_and_user(str(data.url), user_id, db)
     if service:
-        raise HTTPException(status_code=400, detail="Service already regsitered")
+        raise HTTPException(
+            status_code=400, detail="Service already regsitered"
+        )
     new_service = Service(name=data.name, url=str(data.url), user_id=user_id)
     saved_service = save_service(new_service, db)
     return saved_service
@@ -34,7 +38,9 @@ def list_services(user_id: int, db: Session) -> list[ServiceOut]:
     return services
 
 
-def update_service(data: ServiceUpdate, service_id: int, db: Session) -> ServiceOut:
+def update_service(
+    data: ServiceUpdate, service_id: int, db: Session
+) -> ServiceOut:
     service = get_service_by_id(service_id, db)
     if not service:
         raise HTTPException(status_code=404, detail="Service not registered")
@@ -59,7 +65,9 @@ async def check_service_status(service_id: int, db: Session):
     try:
         status_enum = ServiceState(status_str)
     except ValueError:
-        raise HTTPException(status_code=500, detail=f"Invalid status: {status_str}")
+        raise HTTPException(
+            status_code=500, detail=f"Invalid status: {status_str}"
+        )
     new_status = ServiceStatus(
         status=status_enum, response_time=response_time, service_id=service_id
     )

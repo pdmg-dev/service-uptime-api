@@ -3,7 +3,7 @@
 from typing import Generator
 
 from fastapi import Depends, HTTPException, status
-from jose import JWTError, jwt, ExpiredSignatureError
+from jose import ExpiredSignatureError, JWTError, jwt
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -51,5 +51,7 @@ def get_current_user(
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     """Dependency that ensures the current user has admin privileges."""
     if not getattr(current_user, "is_admin", False):
-        raise HTTPException(status_code=403, detail="Admin privileges required")
+        raise HTTPException(
+            status_code=403, detail="Admin privileges required"
+        )
     return current_user

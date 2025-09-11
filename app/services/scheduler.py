@@ -1,29 +1,35 @@
 import asyncio
 import time
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
+
 from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.logging import logging
-from app.models.service import Service, ServiceStatus, ServiceState
+from app.models.service import Service, ServiceState, ServiceStatus
 from app.services.checker import check_service
 from app.services.cleanup import cleanup_old_statuses
-
 
 logger = logging.getLogger(__name__)
 
 
-async def store_results_batch(results: list[tuple[int, ServiceState, float | None]]):
+async def store_results_batch(
+    results: list[tuple[int, ServiceState, float | None]],
+):
     """Persist multiple service check results in one transaction."""
+
     def _store():
         db: Session = SessionLocal()
         try:
             for service_id, status, response_time in results:
-                db.add(ServiceStatus(
-                    service_id=service_id,
-                    status=status,
-                    response_time=response_time,
-                ))
+                db.add(
+                    ServiceStatus(
+                        service_id=service_id,
+                        status=status,
+                        response_time=response_time,
+                    )
+                )
             db.commit()
         except Exception:
             db.rollback()
@@ -43,9 +49,13 @@ async def poll_services():
         # Fetch active services
         db = SessionLocal()
         try:
-            services = db.query(Service).filter(Service.is_active.is_(True)).all()
+            services = (
+                db.query(Service).filter(Service.is_active.is_(True)).all()
+            )
         except Exception as e:
-            logger.exception("[Scheduler Error] Failed to fetch services: %s", e)
+            logger.exception(
+                "[Scheduler Error] Failed to fetch services: %s", e
+            )
             services = []
         finally:
             db.close()

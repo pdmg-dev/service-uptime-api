@@ -26,12 +26,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    data: dict, expires_delta: Optional[timedelta] = None
+) -> str:
     """Creates a JWT access token with an expiration time."""
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
+        expires_delta
+        or timedelta(minutes=settings.access_token_expire_minutes)
     )
     # Ensure 'exp' and 'sub' claims are present
     to_encode.update({"exp": expire, "sub": to_encode.get("sub")})
-    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+    return jwt.encode(
+        to_encode, settings.secret_key, algorithm=settings.algorithm
+    )

@@ -1,11 +1,14 @@
 # app/services/cleanup.py
 from datetime import datetime, timedelta
+
 from sqlalchemy.orm import Session
+
 from app.core.database import SessionLocal
-from app.models.service import ServiceStatus
 from app.core.logging import logging
+from app.models.service import ServiceStatus
 
 logger = logging.getLogger(__name__)
+
 
 def cleanup_old_statuses(days: int = 30):
     """Delete old ServiceStatus rows beyond retention period."""
@@ -19,7 +22,9 @@ def cleanup_old_statuses(days: int = 30):
         )
         db.commit()
         if deleted:
-            logger.info(f"[Cleanup] Deleted {deleted} old service status records.")
+            logger.info(
+                f"[Cleanup] Deleted {deleted} old service status records."
+            )
     except Exception:
         db.rollback()
         logger.exception("[Cleanup] Failed to delete old statuses.")

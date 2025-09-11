@@ -3,10 +3,10 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.logging import logging
 from app.core.security import create_access_token, verify_password
 from app.models.user import User
 from app.repositories.user import get_user_by_username
-from app.core.logging import logging
 
 logger = logging.getLogger(__name__)
 

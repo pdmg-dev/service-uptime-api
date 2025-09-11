@@ -1,17 +1,25 @@
 # app/repositories/service.py
 
-from sqlalchemy.orm import Session
 from typing import Optional
+
+from sqlalchemy.orm import Session
+
 from app.models.service import Service, ServiceStatus
 
 
-def get_service_by_url_and_user(url: str, user_id: int, db: Session) -> Service | None:
+def get_service_by_url_and_user(
+    url: str, user_id: int, db: Session
+) -> Service | None:
     return (
-        db.query(Service).filter(Service.url == url, Service.user_id == user_id).first()
+        db.query(Service)
+        .filter(Service.url == url, Service.user_id == user_id)
+        .first()
     )
 
 
-def get_services_by_user_id(user_id: int, db: Session) -> Optional[list[Service]]:
+def get_services_by_user_id(
+    user_id: int, db: Session
+) -> Optional[list[Service]]:
     return db.query(Service).filter(Service.user_id == user_id).all()
 
 
@@ -46,6 +54,7 @@ def update(service: Service, db: Session) -> Service:
     db.commit()
     db.refresh(service)
     return service
+
 
 def delete(service: Service, db: Session) -> None:
     db.delete(service)

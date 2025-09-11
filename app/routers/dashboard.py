@@ -19,8 +19,7 @@ def dashboard_status(db: Session = Depends(get_db)):
             "url": service.url,
             "status": status.status,
             "response_time": status.response_time,
-            "checked_at": status.checked_at
+            "checked_at": status.checked_at,
         }
         for service, status in rows
     ]
-
