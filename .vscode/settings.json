@@ -11,5 +11,26 @@
     "[json]": {
         "editor.defaultFormatter": "vscode.json-language-features",
         "editor.tabSize": 4
-    }
+    },
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.venv": true,
+        "**/.ruff_cache": true,
+        "node_modules": true,
+        "package.json": true,
+        "package-lock.json": true,
+        ".flaskenv": true,
+        "pyproject.toml": true,
+        ".prettierrc": true,
+        ".pre-commit-config.yaml": true,
+        "instance": true,
+        ".gitignore": true,
+        "requirements.txt": true,
+        "LICENSE": true,
+        "README.md": true,
+        ".mypy_cache": true,
+        ".pytest_cache": true,
+        "dev.db": true,
+        ".env": true
+    },
 }
