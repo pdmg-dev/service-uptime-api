@@ -1,10 +1,13 @@
 # app/models/service.py
+"""SQLAlchemy models for monitored services and their status checks."""
+
+from __future__ import annotations
 
 import enum
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
-    Column,
     DateTime,
     Enum,
     Float,
@@ -13,13 +16,15 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.core.database import Base
 
 
 class ServiceState(str, enum.Enum):
+    """Possible states returned by a service health check."""
+
     UP = "UP"
     DOWN = "DOWN"
     SLOW = "SLOW"
@@ -32,26 +37,29 @@ class ServiceState(str, enum.Enum):
 
 
 class Service(Base):
-    """ORM model representing a monitored service."""
+    """A service (website/API) monitored for uptime and performance."""
 
     __tablename__ = "services"
     __table_args__ = (
         UniqueConstraint("url", "user_id", name="uniq_user_service"),
     )
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    url = Column(String(2048), nullable=False)
-    is_active = Column(Boolean, default=True)
-    user_id = Column(
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    keyword = Column(String, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    keyword: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
-    owner = relationship("User", back_populates="services")
-    statuses = relationship(
-        "ServiceStatus",
+    owner: Mapped["User"] = relationship(  # noqa: F821
+        back_populates="services"
+    )
+    statuses: Mapped[list["ServiceStatus"]] = relationship(
         back_populates="service",
         cascade="all, delete",
         passive_deletes=True,
@@ -59,20 +67,26 @@ class Service(Base):
 
 
 class ServiceStatus(Base):
-    """ORM model representing the status check result of a service."""
+    """Result of a single status check for a service."""
 
     __tablename__ = "service_status"
-    id = Column(Integer, primary_key=True, index=True)
-    service_id = Column(
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    service_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("services.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    status = Column(Enum(ServiceState), nullable=False)
-    response_time = Column(Float, nullable=True)
-    checked_at = Column(DateTime(timezone=True), server_default=func.now())
+    status: Mapped[ServiceState] = mapped_column(
+        Enum(ServiceState), nullable=False
+    )
+    response_time: Mapped[float | None] = mapped_column(Float, nullable=True)
+    checked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
 
-    service = relationship(
-        "Service", back_populates="statuses", passive_deletes=True
+    service: Mapped[Service] = relationship(
+        back_populates="statuses",
+        passive_deletes=True,
     )

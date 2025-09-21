@@ -1,32 +1,30 @@
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.models.service import Service, ServiceStatus
 
 
 def get_services_with_latest_status(db: Session):
     # Subquery to find the latest check time per service
-    latest_status_sq = (
-        select(
+    # subquery to get max checked_at per service_id
+    latest_time = (
+        db.query(
             ServiceStatus.service_id,
-            func.max(ServiceStatus.checked_at).label("latest_checked_at"),
+            func.max(ServiceStatus.checked_at).label("latest_time"),
         )
         .group_by(ServiceStatus.service_id)
         .subquery()
     )
 
-    # Alias to join the actual latest ServiceStatus rows
-    ss_alias = aliased(ServiceStatus)
-
-    query = (
-        db.query(Service, ss_alias)
-        .join(latest_status_sq, Service.id == latest_status_sq.c.service_id)
+    # join ServiceStatus to that subquery to get the newest row for each service
+    return (
+        db.query(Service, ServiceStatus)
+        .join(ServiceStatus, ServiceStatus.service_id == Service.id)
         .join(
-            ss_alias,
-            (ss_alias.service_id == latest_status_sq.c.service_id)
-            & (ss_alias.checked_at == latest_status_sq.c.latest_checked_at),
+            latest_time,
+            (ServiceStatus.service_id == latest_time.c.service_id)
+            & (ServiceStatus.checked_at == latest_time.c.latest_time),
         )
         .order_by(Service.name)
+        .all()
     )
-
-    return query.all()
