@@ -28,8 +28,6 @@ def dashboard_api(db: Session = Depends(get_db)):
         for s, st in services
     ]
 
-
-# ---------- HTML Dashboard ----------
 @router.get("/dashboard")
 def show_dashboard(request: Request, db: Session = Depends(get_db)):
     """Render HTML dashboard with latest service statuses."""

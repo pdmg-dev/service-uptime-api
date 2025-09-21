@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.database import Base, engine
-from app.routers import auth, dashboard, health, service
+from app.routers import auth, dashboard, health, service, ws_dashboard
 from app.services import checker
 from app.services.scheduler import poll_services
 
@@ -31,3 +31,4 @@ app.include_router(service.router)
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(health.router)
+app.include_router(ws_dashboard.router)
