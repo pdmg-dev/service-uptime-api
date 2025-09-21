@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="title is-4">Service Status Dashboard</h2>
+
+<table class="table is-fullwidth is-striped" id="service-body">
+  <thead>
+    <tr>
+      <th>Service</th>
+      <th>Status</th>
+      <th>Response Time (ms)</th>
+      <th>Last Checked</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in services %}
+    <tr>
+      <td>{{ s.name }}</td>
+      <td>
+        <span class="tag is-{{ s.status_color }}">
+          {{ s.status }}
+        </span>
+      </td>
+      <td>{{ s.response_time|default('—') }}</td>
+      <td>
+        {% if s.checked_at %}
+          {{ s.checked_at.strftime("%Y-%m-%d %H:%M:%S") }}
+        {% else %}
+          —
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+const ws = new WebSocket(`ws://${location.host}/ws/status`);
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  const tbody = document.querySelector("#service-body tbody");
+  tbody.innerHTML = "";
+  data.forEach(svc => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${svc.name}</td>
+      <td><span class="tag is-${colorMap(svc.status)}">${svc.status}</span></td>
+      <td>${svc.response_time ?? "—"}</td>
+      <td>${svc.checked_at}</td>
+    `;
+    tbody.appendChild(row);
+  });
+};
+
+function colorMap(status) {
+  const colors = {
+    UP: "success",
+    SLOW: "warning",
+    LIMITED: "warning",
+    REDIRECT: "info",
+    FORBIDDEN: "danger",
+    DOWN: "danger",
+    UNREACHABLE: "dark",
+    INVALID_CONTENT: "danger",
+    ERROR: "danger"
+  };
+  return colors[status] || "light";
+}
+
+ws.onclose = () => console.log("WebSocket closed");
+</script>
+{% endblock %}
