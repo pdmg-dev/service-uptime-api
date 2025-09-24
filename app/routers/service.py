@@ -77,9 +77,7 @@ async def check_service_status(
     return ServiceStatusOut.model_validate(service_status)
 
 
-@router.get(
-    "/{service_id}/status/history", response_model=list[ServiceStatusOut]
-)
+@router.get("/{service_id}/status/history", response_model=list[ServiceStatusOut])
 def view_service_status_history(
     service_id: int,
     db: Session = Depends(get_db),

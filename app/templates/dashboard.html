@@ -1,72 +1,96 @@
-{% extends "base.html" %}
-{% block content %}
-<h2 class="title is-4">Service Status Dashboard</h2>
+{% extends "base.html" %} {% block content %}
 
-<table class="table is-fullwidth is-striped" id="service-body">
-  <thead>
-    <tr>
-      <th>Service</th>
-      <th>Status</th>
-      <th>Response Time (ms)</th>
-      <th>Last Checked</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for s in services %}
-    <tr>
-      <td>{{ s.name }}</td>
-      <td>
-        <span class="tag is-{{ s.status_color }}">
-          {{ s.status }}
-        </span>
-      </td>
-      <td>{{ s.response_time|default('—') }}</td>
-      <td>
-        {% if s.checked_at %}
-          {{ s.checked_at.strftime("%Y-%m-%d %H:%M:%S") }}
-        {% else %}
-          —
-        {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="card">
+	<header class="card-header">
+		<p class="card-header-title is-size-4 has-text-weight-semibold">Service Status Dashboard</p>
+	</header>
+
+	<div class="card-content">
+		<table class="table is-fullwidth is-hoverable" id="service-body">
+			<thead>
+				<tr>
+					<th>Service</th>
+					<th>Status</th>
+					<th>Response Time (ms)</th>
+					<th>Last Checked</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for s in services %}
+				<tr id="service-{{ s.id }}">
+					<td class="has-text-weight-medium">{{ s.name }}</td>
+					<td>
+						<span class="tag is-{{ s.status_color }} is-medium"> {{ s.status }} </span>
+					</td>
+					<td>{{ s.response_time|default('—') }}</td>
+					<td>{% if s.checked_at %} {{ s.checked_at.strftime("%b %d, %Y %I:%M %p") }} {% else %}—{% endif %}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+</div>
 
 <script>
-const ws = new WebSocket(`ws://${location.host}/ws/status`);
+	const wsProtocol = location.protocol === "https:" ? "wss" : "ws";
+	const ws = new WebSocket(`${wsProtocol}://${location.host}/ws/status`);
 
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  const tbody = document.querySelector("#service-body tbody");
-  tbody.innerHTML = "";
-  data.forEach(svc => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${svc.name}</td>
-      <td><span class="tag is-${colorMap(svc.status)}">${svc.status}</span></td>
-      <td>${svc.response_time ?? "—"}</td>
-      <td>${svc.checked_at}</td>
+	ws.onmessage = (event) => {
+		const data = JSON.parse(event.data);
+		data.forEach((svc) => {
+			let row = document.querySelector(`#service-${svc.id}`);
+			if (!row) {
+				row = document.createElement("tr");
+				row.id = `service-${svc.id}`;
+				document.querySelector("#service-body tbody").appendChild(row);
+			}
+			row.innerHTML = `
+      <td class="has-text-weight-medium">${svc.name}</td>
+      <td><span class="tag is-${colorMap(svc.status)} is-medium">${svc.status}</span></td>
+      <td>${formatMs(svc.response_time)}</td>
+      <td data-time="${svc.checked_at}">
+        ${formatTime(svc.checked_at)}
+      </td>
     `;
-    tbody.appendChild(row);
-  });
-};
+		});
+	};
 
-function colorMap(status) {
-  const colors = {
-    UP: "success",
-    SLOW: "warning",
-    LIMITED: "warning",
-    REDIRECT: "info",
-    FORBIDDEN: "danger",
-    DOWN: "danger",
-    UNREACHABLE: "dark",
-    INVALID_CONTENT: "danger",
-    ERROR: "danger"
-  };
-  return colors[status] || "light";
-}
+	function colorMap(status) {
+		const colors = {
+			UP: "success",
+			SLOW: "warning",
+			LIMITED: "warning",
+			REDIRECT: "info",
+			FORBIDDEN: "danger",
+			DOWN: "danger",
+			UNREACHABLE: "dark",
+			INVALID_CONTENT: "danger",
+			ERROR: "danger",
+		};
+		return colors[status] || "light";
+	}
 
-ws.onclose = () => console.log("WebSocket closed");
+	function formatMs(val) {
+		return val != null ? `${Math.round(val)} ms` : "—";
+	}
+
+	function formatTime(iso) {
+		if (!iso) return "—";
+		const date = new Date(iso); // automatically converts to local time
+		const diff = (Date.now() - date.getTime()) / 1000;
+		if (diff < 60) return `${Math.floor(diff)} s ago`;
+		if (diff < 3600) return `${Math.floor(diff / 60)} m ago`;
+		if (diff < 86400) return `${Math.floor(diff / 3600)} h ago`;
+		// fallback: show local string
+		return date.toLocaleString(); // local time string
+	}
+
+	setInterval(() => {
+		document.querySelectorAll("[data-time]").forEach((td) => {
+			td.textContent = formatTime(td.dataset.time);
+		});
+	}, 60000);
+
+	ws.onclose = () => console.log("WebSocket closed");
 </script>
 {% endblock %}

@@ -13,6 +13,8 @@ from app.services.cleanup import cleanup_old_statuses
 
 logger = logging.getLogger(__name__)
 
+last_scheduler_run: float | None = None
+
 
 async def store_results_batch(
     results: list[tuple[int, ServiceState, float | None]],
@@ -49,13 +51,9 @@ async def poll_services():
         # Fetch active services
         db = SessionLocal()
         try:
-            services = (
-                db.query(Service).filter(Service.is_active.is_(True)).all()
-            )
+            services = db.query(Service).filter(Service.is_active.is_(True)).all()
         except Exception as e:
-            logger.exception(
-                "[Scheduler Error] Failed to fetch services: %s", e
-            )
+            logger.exception("[Scheduler Error] Failed to fetch services: %s", e)
             services = []
         finally:
             db.close()
@@ -104,12 +102,8 @@ async def poll_services():
             await store_results_batch(results_batch)
 
             elapsed = time.perf_counter() - start
-            status_summary = ", ".join(
-                f"{count} {status}" for status, count in status_counter.items()
-            )
-            logger.info(
-                f"[Scheduler] Checked {len(services)} services in {elapsed:.2f}s → {status_summary}"
-            )
+            status_summary = ", ".join(f"{count} {status}" for status, count in status_counter.items())
+            logger.info(f"[Scheduler] Checked {len(services)} services in {elapsed:.2f}s → {status_summary}")
             last_scheduler_run = time.time()
 
         except asyncio.TimeoutError:

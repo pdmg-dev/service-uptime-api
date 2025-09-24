@@ -1,5 +1,4 @@
 # app/main.py
-
 """Entry point for the Service Uptime API application."""
 
 import asyncio
@@ -12,16 +11,27 @@ from app.routers import auth, dashboard, health, service, ws_dashboard
 from app.services import checker
 from app.services.scheduler import poll_services
 
-# Create database tables on startup
-Base.metadata.create_all(bind=engine)
-
 
 @asynccontextmanager
-async def lifespan(_app):
-    """Lifespan context manager for FastAPI."""
-    asyncio.create_task(poll_services())  # Start background service polling
-    yield
-    await checker.client.aclose()  # Close shared HTTP client
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+
+    # start background polling and keep a reference to cancel later
+    scheduler_task = asyncio.create_task(poll_services())  # store reference
+    app.state.scheduler_task = scheduler_task  # save in app.state
+
+    try:
+        yield
+    finally:
+        # cancel scheduler first so it stops cleanly
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
+
+        # close the shared HTTP client
+        await checker.client.aclose()  # <<< existing, but now after cancel
 
 
 app = FastAPI(title="Service Uptime API", lifespan=lifespan)

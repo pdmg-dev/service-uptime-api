@@ -15,13 +15,13 @@ router = APIRouter(prefix="/ws", tags=["Dashboard"])
 @router.websocket("/status")
 async def ws_status(websocket: WebSocket):
     await websocket.accept()
+    db = SessionLocal()
     try:
         while True:
-            # fetch latest service statuses from DB
-            db = SessionLocal()
             rows = latest_service_statuses(db)
             payload = [
                 {
+                    "id": svc.id,
                     "name": svc.name,
                     "status": st.status.value,
                     "response_time": st.response_time,
@@ -30,8 +30,8 @@ async def ws_status(websocket: WebSocket):
                 for svc, st in rows
             ]
             await websocket.send_text(json.dumps(payload))
-            await sleep(5)  # push updates every 5 seconds
+            await sleep(5)
     except WebSocketDisconnect:
         print("Client disconnected")
     finally:
-        await websocket.close()
+        db.close()

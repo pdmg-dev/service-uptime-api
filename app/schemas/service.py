@@ -11,6 +11,7 @@ from app.models.service import ServiceState
 class ServiceIn(BaseModel):
     name: str
     url: HttpUrl
+    keyword: Optional[str] = None
 
 
 class ServiceUpdate(BaseModel):

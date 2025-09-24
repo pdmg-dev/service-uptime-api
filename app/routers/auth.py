@@ -23,7 +23,5 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ) -> TokenOut:
-    access_token = login_for_access_token(
-        form_data.username, form_data.password, db
-    )
+    access_token = login_for_access_token(form_data.username, form_data.password, db)
     return TokenOut(access_token=access_token, token_type="bearer")

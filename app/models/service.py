@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
@@ -40,25 +40,17 @@ class Service(Base):
     """A service (website/API) monitored for uptime and performance."""
 
     __tablename__ = "services"
-    __table_args__ = (
-        UniqueConstraint("url", "user_id", name="uniq_user_service"),
-    )
+    __table_args__ = (UniqueConstraint("url", "user_id", name="uniq_user_service"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     url: Mapped[str] = mapped_column(String(2048), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     keyword: Mapped[str | None] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    owner: Mapped["User"] = relationship(  # noqa: F821
-        back_populates="services"
-    )
+    owner: Mapped["User"] = relationship(back_populates="services")  # noqa: F821
     statuses: Mapped[list["ServiceStatus"]] = relationship(
         back_populates="service",
         cascade="all, delete",
@@ -78,13 +70,9 @@ class ServiceStatus(Base):
         nullable=False,
         index=True,
     )
-    status: Mapped[ServiceState] = mapped_column(
-        Enum(ServiceState), nullable=False
-    )
+    status: Mapped[ServiceState] = mapped_column(Enum(ServiceState), nullable=False)
     response_time: Mapped[float | None] = mapped_column(Float, nullable=True)
-    checked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
+    checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     service: Mapped[Service] = relationship(
         back_populates="statuses",

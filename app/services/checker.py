@@ -32,14 +32,13 @@ def classify_status(
     response: str | None,
     slow_threshold_ms: int,
 ) -> ServiceState:
-    """Classify service status by HTTP code, body keyword, and latency."""
     if code is None:
         return ServiceState.UNREACHABLE
 
     if 200 <= code < 300:
         if keyword and keyword not in (response or ""):
             return ServiceState.INVALID_CONTENT
-        if response_time and response_time > slow_threshold_ms:
+        if response_time is not None and response_time > slow_threshold_ms:
             return ServiceState.SLOW
         return ServiceState.UP
 
@@ -52,40 +51,31 @@ def classify_status(
     return ServiceState.DOWN
 
 
-async def _perform_request(
-    url: str, retries: int = 3, base_delay: float = 0.5
-) -> tuple[int | None, float | None, str | None]:
-    """GET with retries and exponential backoff."""
-    attempt, last_elapsed = 0, None
+async def _perform_request(url: str, retries: int = 3, base_delay: float = 0.5):
+    attempt = 0
+    last_latency: float | None = None
     loop = asyncio.get_running_loop()
 
     while attempt < retries:
         start = loop.time()
         try:
-            r = await client.get(url)  # follow_redirects disabled on client
-            return r.status_code, (loop.time() - start) * 1000, r.text
+            response = await client.get(url)
+            latency = (loop.time() - start) * 1000
+            return response.status_code, latency, response.text
         except httpx.TimeoutException:
-            last_elapsed = (loop.time() - start) * 1000
-            logger.warning(
-                "[Timeout] %s attempt %d/%d after %.2f ms",
-                url,
-                attempt + 1,
-                retries,
-                last_elapsed,
-            )
-        except (httpx.RequestError, ssl.SSLError) as e:
-            logger.warning(
-                "[RequestError] %s attempt %d: %s", url, attempt + 1, e
-            )
+            last_latency = (loop.time() - start) * 1000
+            logger.warning("[Timeout] %s attempt %d/%d after %.2f ms", url, attempt + 1, retries, last_latency)
+        except (httpx.RequestError, ssl.SSLError) as error:
+            logger.warning("[RequestError] %s attempt %d: %s", url, attempt + 1, error)
         except Exception:
             logger.exception("[Unhandled] %s attempt %d", url, attempt + 1)
 
-        delay = base_delay * (2**attempt) + random.uniform(0, 0.3)
-        logger.debug("[Backoff] %s retry in %.2fs", url, delay)
-        await asyncio.sleep(delay)
         attempt += 1
+        delay = base_delay * (2 ** (attempt - 1)) + random.uniform(0, 0.3)
+        logger.debug("[Backoff] %s retrying in %.2fs", url, delay)
+        await asyncio.sleep(delay)
 
-    return None, last_elapsed, None
+    return None, last_latency, None
 
 
 async def check_service(
@@ -102,18 +92,12 @@ async def check_service(
 
         try:
             code, elapsed, text = await _perform_request(url, retries, delay)
-            status = classify_status(
-                code, elapsed, keyword, text, slow_threshold_ms
-            )
+            status = classify_status(code, elapsed, keyword, text, slow_threshold_ms)
 
             if status is ServiceState.INVALID_CONTENT:
-                logger.warning(
-                    "[ContentMismatch] %s missing '%s'", url, keyword
-                )
+                logger.warning("[ContentMismatch] %s missing '%s'", url, keyword)
             elif status is not ServiceState.UP:
-                logger.warning(
-                    "[Status] %s returned %s → %s", url, code or "N/A", status
-                )
+                logger.warning("[Status] %s returned %s → %s", url, code or "N/A", status)
 
             if elapsed:
                 logger.debug("[End] %s → %s (%.2f ms)", url, status, elapsed)

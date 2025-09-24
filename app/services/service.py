@@ -26,7 +26,7 @@ def register_service_url(
         raise HTTPException(
             status_code=400, detail="Service already regsitered"
         )
-    new_service = Service(name=data.name, url=str(data.url), user_id=user_id)
+    new_service = Service(name=data.name, url=str(data.url), user_id=user_id, keyword=data.keyword)
     saved_service = save_service(new_service, db)
     return saved_service
 

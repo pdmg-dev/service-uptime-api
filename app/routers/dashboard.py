@@ -1,5 +1,6 @@
 # app/routers/dashboard.py
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -28,12 +29,13 @@ def dashboard_api(db: Session = Depends(get_db)):
         for s, st in services
     ]
 
-@router.get("/dashboard")
+
+@router.get("/dashboard", response_class=HTMLResponse)
 def show_dashboard(request: Request, db: Session = Depends(get_db)):
-    """Render HTML dashboard with latest service statuses."""
     services = latest_service_statuses(db)
     rows = [
         {
+            "id": s.id,
             "name": s.name,
             "status": st.status.value,
             "response_time": st.response_time,

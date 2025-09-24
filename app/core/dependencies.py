@@ -22,9 +22,7 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
-) -> User:
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
     """Extracts and validates the current user from the JWT token."""
     # Define a generic credentials error to reuse
     credentials_exception = HTTPException(
@@ -34,17 +32,13 @@ def get_current_user(
     )
     try:
         # Decode JWT token using secret key and algorithm
-        payload = jwt.decode(
-            token, settings.secret_key, algorithms=[settings.algorithm]
-        )
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         user_email: str = payload.get("sub")
         if user_email is None:
             raise credentials_exception
     except ExpiredSignatureError:
         # Token has expired
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
     except JWTError:
         # Token is invalid or malformed
         raise credentials_exception
