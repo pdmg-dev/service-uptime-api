@@ -2,15 +2,27 @@
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports.ruff": "always",
-        "source.fixAll.ruff": "always"
+        "source.fixAll.ruff": "explicit"
     },
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter",
         "editor.formatOnSave": true
     },
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.tabSize": 2,
+    },
+    "[css]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
     "[json]": {
         "editor.defaultFormatter": "vscode.json-language-features",
         "editor.tabSize": 4
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.tabSize": 4,
+        "editor.formatOnSave": true
     },
     "files.exclude": {
         "**/__pycache__": true,
@@ -19,7 +31,7 @@
         "node_modules": true,
         "package.json": true,
         "package-lock.json": true,
-        "pyproject.toml": true,
+        "pyproject.toml": false,
         ".prettierrc": true,
         ".pre-commit-config.yaml": true,
         "instance": true,
@@ -29,7 +41,7 @@
         "README.md": false,
         ".mypy_cache": true,
         ".pytest_cache": true,
-        "dev.db": true,
+        "dev.db": false,
         ".env": false,
     },
 }
